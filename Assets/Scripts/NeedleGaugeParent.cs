@@ -9,8 +9,14 @@ public class NeedleGaugeParent : MonoBehaviour
     public float maxAngle = 180f;
 
     [Header("Rotation Speed")]
-    [Tooltip("Multiplier for how fast the needle rotates to its target angle.")]
+    [Tooltip("How fast the needle rotates to its target angle.")]
     public float rotationSpeed = 10f;
+
+    [Header("Shake Effect (at max RPM)")]
+    [Tooltip("Amplitude of the needle shake in degrees.")]
+    public float shakeAmplitude = 2f;
+    [Tooltip("Frequency of the needle shake (in Hz).")]
+    public float shakeFrequency = 10f;
 
     [Header("Car / RPM")]
     [Tooltip("Reference to the PlayerCarController script, which holds the RPM values.")]
@@ -21,22 +27,21 @@ public class NeedleGaugeParent : MonoBehaviour
         if (playerCar == null)
             return;
 
-        // Retrieve RPM values from the car.
-        float currentRPM = playerCar.engineRPM;
-        float minRPM = playerCar.minRPM;
-        float maxRPM = playerCar.maxRPM;
+        // Get normalized RPM (0 to 1).
+        float normalizedRPM = Mathf.Clamp01((playerCar.engineRPM - playerCar.minRPM) / (playerCar.maxRPM - playerCar.minRPM));
 
-        // Normalize the current RPM between 0 and 1.
-        float normalizedRPM = Mathf.Clamp01((currentRPM - minRPM) / (maxRPM - minRPM));
-
-        // Determine the target angle based on normalized RPM.
+        // Calculate target angle based on normalized RPM.
         float targetAngle = Mathf.Lerp(minAngle, maxAngle, normalizedRPM);
 
-        // Smoothly interpolate from the current angle to the target angle.
+        // When near or at max RPM, add a shake effect.
+        if (normalizedRPM >= 0.98f)
+        {
+            targetAngle += shakeAmplitude * Mathf.Sin(Time.time * shakeFrequency);
+        }
+
+        // Smoothly interpolate from current angle to target angle.
         float currentAngle = transform.localRotation.eulerAngles.z;
         float newAngle = Mathf.LerpAngle(currentAngle, targetAngle, Time.deltaTime * rotationSpeed);
-
-        // Apply the rotation.
         transform.localRotation = Quaternion.Euler(0f, 0f, newAngle);
     }
 }
